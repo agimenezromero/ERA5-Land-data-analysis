@@ -88,7 +88,7 @@ function compute_MGDD_HN(infilename, outfilename ; threshold_1=285.15, threshold
         lats = m["latitudes"]
         lons = m["longitudes"]
 
-        shape = size(m["values"])
+        shape = (size(m["values"])[2], size(m["values"])[1])
         
         f = open(outfilename, "w")
 
@@ -133,7 +133,7 @@ function compute_CDD_HS(infilename, outfilename; T_base=279.15)
         lats = m["latitudes"]
         lons = m["longitudes"]
 
-        shape = size(m["values"])
+        shape = (size(m["values"])[2], size(m["values"])[1])
         
         f = open(outfilename, "w")
 
@@ -214,7 +214,7 @@ function compute_CDD_HN(infilename_1, infilename_2, outfilename; T_base=279.15)
         global lats = m["latitudes"]
         global lons = m["longitudes"]
         
-        global shape = size(m["values"])
+        global shape = (size(m["values"])[2], size(m["values"])[1])
 
     end
     
@@ -232,6 +232,117 @@ function compute_CDD_HN(infilename_1, infilename_2, outfilename; T_base=279.15)
     
     close(f)
 
+end
+
+function compute_MGDD_HS(infilename_1, infilename_2, outfilename ; threshold_1=285.15, threshold_2=291.15, threshold_3=301.15, threshold_4=305.15, last_T=308.15)
+   
+    #Open first file
+    GribFile(infilename_1) do f
+        
+        m = Message(f)
+        
+        T = vec(m["values"])
+        
+        global GDD_1 = zeros(length(T))
+        
+        for message in f
+            
+            T = vec(message["values"])
+            
+            for i in eachindex(T)
+               
+                if T[i] > threshold_1
+                   
+                    if T[i] < threshold_2 #First slope
+                        
+                        GDD_1[i] += 2/3 * (T[i] - threshold_1)
+
+                    elseif (T[i] >= threshold_2) && (T[i] < threshold_3) #Second slope
+
+                        GDD_1[i] +=  2/3 * (threshold_2 - threshold_1) + (T[i] - threshold_2)
+
+                    elseif (T[i] >= threshold_3) && (T[i] < threshold_4) #Third slope
+
+
+                        GDD_1[i] += 2/3 * (threshold_2 - threshold_1) + (threshold_3 - threshold_2) - 1.25*(T[i] - threshold_3)
+
+                    elseif (T[i] >= threshold_4) && (T[i] < last_T) #Last slope
+                        
+                        GDD_1[i] += 2/3 * (threshold_2 - threshold_1) + (threshold_3 - threshold_2) - 1.25*(threshold_4 - threshold_3) -3*(T[i] - threshold_4)
+                    
+                    end
+                    
+                end
+                
+            end
+            
+        end
+
+    end
+    
+    #Open second file
+    GribFile(infilename_2) do f
+        
+        m = Message(f)
+        
+        T = vec(m["values"])
+        
+        global GDD_2 = zeros(length(T))
+        
+        for message in f
+            
+            T = vec(message["values"])
+            
+            for i in eachindex(T)
+               
+                if T[i] > threshold_1
+                   
+                    if T[i] < threshold_2 #First slope
+                        
+                        GDD_2[i] += 2/3 * (T[i] - threshold_1)
+
+                    elseif (T[i] >= threshold_2) && (T[i] < threshold_3) #Second slope
+
+                        GDD_2[i] +=  2/3 * (threshold_2 - threshold_1) + (T[i] - threshold_2)
+
+                    elseif (T[i] >= threshold_3) && (T[i] < threshold_4) #Third slope
+
+
+                        GDD_2[i] += 2/3 * (threshold_2 - threshold_1) + (threshold_3 - threshold_2) - 1.25*(T[i] - threshold_3)
+
+                    elseif (T[i] >= threshold_4) && (T[i] < last_T) #Last slope
+                        
+                        GDD_2[i] += 2/3 * (threshold_2 - threshold_1) + (threshold_3 - threshold_2) - 1.25*(threshold_4 - threshold_3) -3*(T[i] - threshold_4)
+                    
+                    end
+                    
+                end
+                
+            end
+            
+        end
+
+        global lats = m["latitudes"]
+        global lons = m["longitudes"]
+
+        global shape = (size(m["values"])[2], size(m["values"])[1])
+
+    end
+    
+    GDD = GDD_1 .+ GDD_2
+    
+    f = open(outfilename, "w")
+
+	println(f, "#GDD\tLongitudes\tLatitudes\tShape=$shape")
+
+	for i in 1 : length(GDD)
+
+	    println(f, GDD[i]/24.0, "\t", round(lons[i], digits=4), "\t", round(lats[i], digits=4))
+
+	end
+
+	close(f)
+    
 end     
 
 function compute_avg_GDD(infilenames, outfilename)
@@ -446,6 +557,8 @@ function compute_avg_T(infilename, outfilename)
         msg = Message(f)
         
         T = vec(msg["values"])
+
+        T_squared = T.^2
         
         count = 1
         
@@ -454,10 +567,16 @@ function compute_avg_T(infilename, outfilename)
             count += 1
             
             T += vec(m["values"])
+
+            T_squared += vec(m["values"]).^2
             
         end
         
         T_avg = T / count
+
+        var = @. (T_squared / count) - (T_avg^2)
+
+        s = @. sqrt(var/count)
         
         lats = msg["latitudes"]
         lons = msg["longitudes"]
@@ -466,11 +585,11 @@ function compute_avg_T(infilename, outfilename)
         
         f = open(outfilename, "w")
         
-        println(f, "#Avg Temperature\tLon\tLat\tShape=$shape")
+        println(f, "#Avg Temperature\tσ\ts\tLon\tLat\tShape=$shape")
         
         for i in 1 : length(T_avg)
             
-            println(f, T_avg[i], "\t", lons[i], "\t", lats[i])
+            println(f, T_avg[i], "\t", var[i], "\t", s[i], "\t", lons[i], "\t", lats[i])
             
         end
         
