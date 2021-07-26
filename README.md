@@ -98,10 +98,8 @@ Julia 1.5 or higher installed with the following libraries
   
 # Examples
 
-# Running example scripts
-
 # Authors
-* **A. Giménez-Romero**
+* **Alex Giménez-Romero**
 
 # License
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE.md](https://github.com/agimenezromero/ERA5-Land-data-analysis/blob/main/LICENSE) file for details
