@@ -1,5 +1,5 @@
 # ERA5-Land data analysis
-A simple julia library built on top of [GRIB.jl](https://github.com/weech/GRIB.jl) package to analyse satellite-derived data from the ERA5-Land dataset (ECMWF)
+A simple julia library built on top of [GRIB.jl](https://github.com/weech/GRIB.jl) package to analyse ERA5-Land reanalysis dataset (ECMWF)
 
 # Overview
 The aim of this library is to analyse data from the ERA5-Land dataset with a specific purpose, for instance, obtain the monthly minimum average temperature of the coldest month in a given period of time for all the pixels provided by the input data. Other implemented functionality is related to the computation of specific metrics used to asses the risk of *Xylella fastidiosa* (*Xf*) outbreaks in vineyards. All the code in this repository was used in [paper](link)
